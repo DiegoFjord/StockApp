@@ -27,6 +27,40 @@ export async function fetchFilteredStocks(status:string) {
   }
 }
 
+export async function fetchOverviewData(tick:string) { 
+  try {
+    // FOR FREE TIER
+    // REDUCE/REMOVE TIME FOR PREMIUM
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+
+    const API_KEY = process.env.ALPHA_API;
+    //const API_KEY = "test";
+
+    let overview_url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${tick}&apikey=${API_KEY}`
+    //overview_url = "https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo"
+    const overViewData:OverviewStr = (await axios.get(overview_url)).data;
+
+    let  data:{overview: Overview}
+    data = {
+        overview:{
+            Symbol: overViewData["Symbol"] ?? "N/As",
+            AssetType: overViewData["AssetType"] ?? "N/A",
+            Name: overViewData["Name"] ?? "N/A",
+            Description: overViewData["Description"] ?? "N/A",
+            Exchange: overViewData["Exchange"] ?? "N/A",
+            Sector: overViewData["Sector"] ?? "N/A",
+            Industry: overViewData["Industry"] ?? "N/A",
+            MarketCapitalization: overViewData["MarketCapitalization"] ?? "0"
+        }
+    };
+    return data;
+  }catch(error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch stock data.');
+  }
+
+}
+
 export async function fetchStockData(tick:string) { 
 
     try {
@@ -36,16 +70,12 @@ export async function fetchStockData(tick:string) {
     //const API_KEY = "test";
     
     let daily_stock_url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=${tick}&apikey=${API_KEY}`
-    let overview_url = `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${tick}&apikey=${API_KEY}`
-    console.log(daily_stock_url)
 
     //testing
     //daily_stock_url = "https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol=IBM&apikey=demo"
-    //overview_url = "https://www.alphavantage.co/query?function=OVERVIEW&symbol=IBM&apikey=demo"
-    
+
     const predata:StockResponse = (await axios.get(daily_stock_url)).data;
-    const overViewData:OverviewStr = (await axios.get(overview_url)).data;
-    
+
     if(predata == null || predata["Time Series (Daily)"] == null){
         return {
             Information:"bad request",
@@ -61,20 +91,10 @@ export async function fetchStockData(tick:string) {
     let stockdaily:TimeSeries = predata['Time Series (Daily)']
 
     // initialize reponse with metadata
-    let  data:{Information: string, overview: Overview ,stocks: MarketCandlenew[]}
+    let  data:{Information: string ,stocks: MarketCandlenew[]}
     
     data = {
         Information: "status: good",
-        overview:{
-            Symbol: overViewData["Symbol"] ?? "N/As",
-            AssetType: overViewData["AssetType"] ?? "N/A",
-            Name: overViewData["Name"] ?? "N/A",
-            Description: overViewData["Description"] ?? "N/A",
-            Exchange: overViewData["Exchange"] ?? "N/A",
-            Sector: overViewData["Sector"] ?? "N/A",
-            Industry: overViewData["Industry"] ?? "N/A",
-            MarketCapitalization: overViewData["MarketCapitalization"] ?? "0"
-        }, 
         stocks:[]
     };
 
@@ -102,9 +122,6 @@ export async function fetchStockData(tick:string) {
         data.stocks[i].pchange = (100 * ((data.stocks[i].close - lastclose)/lastclose)).toFixed(4);
         lastclose = data.stocks[i].close
     }
-
-
-    // console.log('Data fetch completed after 3 seconds.');
 
     return data;
   } catch (error) {
